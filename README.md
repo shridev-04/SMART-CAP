@@ -76,3 +76,32 @@ Console me aapko links dikhenge:
    ```
 5. Board select kare: **ESP32 Dev Module**, aur COM port select karke **Upload** kare!
 6. ESP32 connect hote hi website par **ESP32: CONNECTED (ONLINE)** ka green indicator aa jayega!
+
+---
+
+## ☁️ Vercel Par Deploy Kaise Kare (Step-by-Step)
+
+Kyunki aapne project already GitHub par upload kar diya hai, Vercel par deploy karna bohot aasan hai:
+
+1. **Vercel me Login kare**:
+   - [https://vercel.com](https://vercel.com) open kare aur apne GitHub account se login kare.
+
+2. **New Project Add kare**:
+   - Dashboard par **"Add New..."** button par click karke **"Project"** select kare.
+
+3. **GitHub Repository Import kare**:
+   - Apni SMART CAP repository ke aage **"Import"** par click kare.
+
+4. **Deploy Settings**:
+   - **Framework Preset**: `Other` (Vercel automatically detect kar leta hai).
+   - **Root Directory**: `./` (default hi rehne de).
+   - **Build Command** aur **Output Directory**: Blank / Default rehne de (`vercel.json` already configured hai).
+
+5. **Deploy Button dabaye**:
+   - **"Deploy"** par click kare! 10-15 seconds ke andar aapki website live ho jayegi:
+     `https://your-smart-cap.vercel.app`
+
+6. **Vercel Pe Fayde**:
+   - **HTTPS Active**: Mobile phone aur doosre laptops par microphone 100% chalega bina kisi setting ke!
+   - **Cloud 3D Visualizer & STT**: Three.js 3D visualizer aur Speech-to-Text browser ke andar full 60FPS speed se chalenge!
+   - **Custom WebSocket Connect**: Website par upar **"ESP32 WEBSOCKET LINK"** box me apna local IP ya ngrok tunnel link daalkar **"CONNECT"** button daba sakte hain.

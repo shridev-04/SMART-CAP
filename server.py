@@ -2,6 +2,7 @@ import asyncio
 import io
 import json
 import logging
+import os
 import socket
 import struct
 import sys
@@ -332,7 +333,23 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 async def serve_index():
+    if os.path.exists("index.html"):
+        return FileResponse("index.html")
     return FileResponse("static/index.html")
+
+
+@app.get("/style.css")
+async def serve_css():
+    if os.path.exists("style.css"):
+        return FileResponse("style.css", media_type="text/css")
+    return FileResponse("static/style.css", media_type="text/css")
+
+
+@app.get("/app.js")
+async def serve_js():
+    if os.path.exists("app.js"):
+        return FileResponse("app.js", media_type="application/javascript")
+    return FileResponse("static/app.js", media_type="application/javascript")
 
 
 if __name__ == "__main__":
