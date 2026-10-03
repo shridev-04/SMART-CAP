@@ -75,13 +75,9 @@
             <i class="fa-solid fa-cube glow-icon"></i> 3D QUANTUM AUDIO-REACTIVE HOLOGRAPH
           </div>
           
-          <div class="mode-toggles">
-            <button class="mode-btn active" id="btnModeBrowser">
-              <i class="fa-solid fa-microphone"></i> DEVICE MIC (TEST)
-            </button>
-            <button class="mode-btn" id="btnModeEsp32">
-              <i class="fa-solid fa-microchip"></i> ESP32 CLOUD STREAM
-            </button>
+          <div class="stream-source-badge">
+            <span class="live-pulse-dot" style="background:#00ff9f; box-shadow:0 0 10px #00ff9f;"></span>
+            <span style="font-family:var(--font-display); font-size:0.75rem; color:#00ff9f; font-weight:700;">LIVE INPUT: ESP32 DIGITAL MIC</span>
           </div>
         </div>
 
@@ -92,7 +88,7 @@
               <span class="tag-title">FPS:</span> <span id="fpsCounter" class="tag-val">60</span>
             </div>
             <div class="hud-data-tag top-right">
-              <span class="tag-title">SOURCE:</span> <span id="activeSourceTag" class="tag-val neon-cyan">DEVICE MIC</span>
+              <span class="tag-title">SOURCE:</span> <span id="activeSourceTag" class="tag-val neon-green">ESP32 DIGITAL MIC</span>
             </div>
             <div class="hud-data-tag bottom-left">
               <span class="tag-title">ENERGY (RMS):</span> <span id="rmsValueTag" class="tag-val">0.0000</span>
@@ -106,17 +102,14 @@
         <!-- 3D Controls Toolbar -->
         <div class="viewport-controls-toolbar">
           <div class="control-group">
-            <button class="cyber-action-btn" id="btnToggleMic">
-              <i class="fa-solid fa-microphone-lines"></i> <span id="btnMicText">START MIC</span>
+            <button class="cyber-btn-secondary" id="btnToggleAudioListen" title="Listen live to ESP32 Mic through laptop speakers" style="border-color: var(--neon-green); color: var(--neon-green);">
+              <i class="fa-solid fa-volume-high"></i> <span id="listenAudioText">SPEAKER: LIVE ON</span>
             </button>
             <button class="cyber-btn-secondary" id="btnToggleMesh">
               <i class="fa-solid fa-shapes"></i> <span id="meshModeText">WIREFRAME</span>
             </button>
             <button class="cyber-btn-secondary" id="btnToggleRotation">
               <i class="fa-solid fa-rotate"></i> ROTATE
-            </button>
-            <button class="cyber-btn-secondary" id="btnToggleAudioListen" title="Listen live to ESP32 Mic through laptop speakers">
-              <i class="fa-solid fa-volume-high"></i> <span id="listenAudioText">SPEAKER: OFF</span>
             </button>
           </div>
           

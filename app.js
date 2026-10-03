@@ -5,14 +5,14 @@
 
 // Global State
 const state = {
-  mode: 'browser', // 'browser' or 'esp32'
+  mode: 'esp32', // Exclusively ESP32 Digital Mic
   language: 'hi-IN', // 'hi-IN' or 'en-IN'
   isMicActive: false,
   sensitivity: 3.5,
   esp32Connected: false,
   isWireframe: true,
   autoRotate: true,
-  listenEsp32Audio: false,
+  listenEsp32Audio: true, // Live sound from ESP32 plays through speakers
   history: [],
 };
 
