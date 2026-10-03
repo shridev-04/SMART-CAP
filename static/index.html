@@ -49,14 +49,14 @@
 
         <div class="esp32-url-card">
           <div class="url-label">
-            <i class="fa-solid fa-link"></i> ESP32 WEBSOCKET LINK:
+            <i class="fa-solid fa-cloud-arrow-up"></i> ESP32 CLOUD LINK:
           </div>
           <div class="url-copy-row">
-            <input type="text" id="esp32UrlInput" value="ws://localhost:8000/ws/esp32" placeholder="ws://<IP>:8000/ws/esp32">
-            <button class="btn-cyber-copy" id="btnCopyEsp32Url" title="Copy WebSocket Link for ESP32">
+            <input type="text" id="esp32UrlInput" value="" placeholder="Generating Cloud Link...">
+            <button class="btn-cyber-copy" id="btnCopyEsp32Url" title="Copy Link for ESP32">
               <i class="fa-regular fa-copy"></i> COPY
             </button>
-            <button class="btn-cyber-copy btn-connect-ws" id="btnConnectCustomWs" title="Connect to custom WebSocket">
+            <button class="btn-cyber-copy btn-connect-ws" id="btnConnectCustomWs" title="Connect / Change Link">
               <i class="fa-solid fa-plug"></i> CONNECT
             </button>
           </div>
@@ -77,10 +77,10 @@
           
           <div class="mode-toggles">
             <button class="mode-btn active" id="btnModeBrowser">
-              <i class="fa-solid fa-microphone"></i> LAPTOP MIC TEST
+              <i class="fa-solid fa-microphone"></i> DEVICE MIC (TEST)
             </button>
             <button class="mode-btn" id="btnModeEsp32">
-              <i class="fa-solid fa-microchip"></i> ESP32 STREAM
+              <i class="fa-solid fa-microchip"></i> ESP32 CLOUD STREAM
             </button>
           </div>
         </div>
@@ -92,7 +92,7 @@
               <span class="tag-title">FPS:</span> <span id="fpsCounter" class="tag-val">60</span>
             </div>
             <div class="hud-data-tag top-right">
-              <span class="tag-title">SOURCE:</span> <span id="activeSourceTag" class="tag-val neon-cyan">LAPTOP MIC</span>
+              <span class="tag-title">SOURCE:</span> <span id="activeSourceTag" class="tag-val neon-cyan">DEVICE MIC</span>
             </div>
             <div class="hud-data-tag bottom-left">
               <span class="tag-title">ENERGY (RMS):</span> <span id="rmsValueTag" class="tag-val">0.0000</span>
@@ -114,6 +114,9 @@
             </button>
             <button class="cyber-btn-secondary" id="btnToggleRotation">
               <i class="fa-solid fa-rotate"></i> ROTATE
+            </button>
+            <button class="cyber-btn-secondary" id="btnToggleAudioListen" title="Listen live to ESP32 Mic through laptop speakers">
+              <i class="fa-solid fa-volume-high"></i> <span id="listenAudioText">SPEAKER: OFF</span>
             </button>
           </div>
           

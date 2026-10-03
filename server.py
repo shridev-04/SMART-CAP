@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import io
 import json
 import logging
@@ -262,11 +263,13 @@ async def websocket_esp32_endpoint(websocket: WebSocket):
                 app_state.esp32_audio_buffer.extend(chunk)
                 bytes_accumulated_for_fft.extend(chunk)
 
-                # Send FFT updates to browser every ~2048 bytes (approx 64ms)
+                # Send FFT updates and live audio chunk to browser every ~2048 bytes (approx 64ms)
                 if len(bytes_accumulated_for_fft) >= 2048:
+                    audio_chunk_bytes = bytes(bytes_accumulated_for_fft)
                     bands, rms, db = compute_frequencies(
-                        bytes(bytes_accumulated_for_fft), sample_rate=SAMPLE_RATE, num_bins=32
+                        audio_chunk_bytes, sample_rate=SAMPLE_RATE, num_bins=32
                     )
+                    b64_audio = base64.b64encode(audio_chunk_bytes).decode("ascii")
                     bytes_accumulated_for_fft.clear()
                     await broadcast_to_web({
                         "type": "frequency_data",
@@ -274,6 +277,7 @@ async def websocket_esp32_endpoint(websocket: WebSocket):
                         "bands": bands,
                         "rms": rms,
                         "db": db,
+                        "audio_b64": b64_audio,
                     })
 
                 # Check if buffer reached threshold for Speech-to-Text

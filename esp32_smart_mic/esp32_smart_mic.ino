@@ -1,6 +1,6 @@
 /**
  * ======================================================================================
- * SMART CAP - ESP32 DIGITAL I2S MIC (INMP441) AUDIO STREAMER
+ * SMART CAP - ESP32 TO VERCEL CLOUD DIRECT AUDIO STREAMER (NO LOCALHOST NEEDED!)
  * ======================================================================================
  * 
  * Hardware Required:
@@ -17,33 +17,32 @@
  *   SCK (Clock)     GPIO 14       I2S Bit Clock (BCLK)
  *   L/R             GND           Left Channel Selection
  * 
- * Required Arduino Libraries:
- * 1. "WebSockets" by Markus Sattler (Search "WebSockets" in Arduino Library Manager)
- * 2. WiFi.h (Built-in ESP32 core)
+ * Zero Additional Libraries Needed! (Uses built-in ESP32 WiFi & HTTPClient)
  * 
  * How to Flash:
  * 1. Open this file in Arduino IDE.
  * 2. Select Board: "ESP32 Dev Module" or "DOIT ESP32 DEVKIT V1".
  * 3. Update WIFI_SSID and WIFI_PASSWORD below.
- * 4. Update SERVER_IP with the IP displayed on your Smart Cap website (e.g., 10.21.66.171).
+ * 4. Paste your Vercel Link into VERCEL_API_URL:
+ *    Example: "https://your-smart-cap.vercel.app/api/audio"
  * 5. Click Upload and open Serial Monitor at 115200 baud!
  * ======================================================================================
  */
 
 #include <WiFi.h>
-#include <WebSocketsClient.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include <driver/i2s.h>
 
-// ---------------- WIFI & SERVER CONFIGURATION ----------------
-const char* WIFI_SSID     = "YOUR_WIFI_NAME";      // <-- Enter your WiFi SSID
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";  // <-- Enter your WiFi Password
+// ---------------- 1. WIFI & VERCEL CLOUD CONFIGURATION ----------------
+const char* WIFI_SSID      = "YOUR_WIFI_NAME";       // <-- Enter your WiFi Name / Hotspot
+const char* WIFI_PASSWORD  = "YOUR_WIFI_PASSWORD";   // <-- Enter your WiFi Password
 
-// Server details (Must match the IP shown on your Smart Cap website)
-const char* SERVER_HOST   = "10.21.66.171";        // <-- Enter your Laptop's IP address
-const int   SERVER_PORT   = 8000;
-const char* WS_PATH       = "/ws/esp32";
+// Put your Vercel link here (No Localhost! Direct Cloud URL)
+// Website pe jo "ESP32 CLOUD LINK" dikh raha hai usko yahan paste karein:
+const char* VERCEL_API_URL = "https://your-smart-cap.vercel.app/api/audio";
 
-// ---------------- I2S MIC CONFIGURATION ----------------
+// ---------------- 2. I2S DIGITAL MIC CONFIGURATION ----------------
 #define I2S_PORT         I2S_NUM_0
 #define PIN_I2S_SCK      14   // BCLK
 #define PIN_I2S_WS       15   // LRC / WS
@@ -52,23 +51,20 @@ const char* WS_PATH       = "/ws/esp32";
 #define SAMPLE_RATE      16000
 #define DMA_BUF_COUNT    8
 #define DMA_BUF_LEN      512
-#define SAMPLES_PER_READ 256
 
-WebSocketsClient webSocket;
-bool isWsConnected = false;
-
-// Buffers for audio processing
-// INMP441 sends 32-bit words (24-bit audio). We convert them to 16-bit PCM for STT.
-int32_t raw_i2s_samples[SAMPLES_PER_READ];
-int16_t pcm16_samples[SAMPLES_PER_READ];
+// Record buffer: ~2.5 seconds of audio (16000 samples/sec * 2.5s = 40,000 samples = 80,000 bytes)
+#define RECORD_SAMPLES   36000 
+int32_t raw_buffer[512];
+int16_t* pcm_audio_buffer = NULL;
+int recorded_count = 0;
 
 void setupI2S() {
-  Serial.println("[I2S] Initializing I2S Driver for INMP441...");
+  Serial.println("[I2S] Initializing INMP441 Microphone Driver...");
 
   const i2s_config_t i2s_config = {
     .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),
     .sample_rate = SAMPLE_RATE,
-    .bits_per_sample = I2S_BITS_PER_SAMPLE_32BIT, // INMP441 outputs 24-bit data in 32-bit slot
+    .bits_per_sample = I2S_BITS_PER_SAMPLE_32BIT,
     .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
     .communication_format = i2s_comm_format_t(I2S_COMM_FORMAT_STAND_I2S),
     .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
@@ -88,41 +84,18 @@ void setupI2S() {
 
   esp_err_t err = i2s_driver_install(I2S_PORT, &i2s_config, 0, NULL);
   if (err != ESP_OK) {
-    Serial.printf("[I2S] Failed to install driver: %d\n", err);
+    Serial.printf("[I2S] Driver install failed: %d\n", err);
     return;
   }
 
   err = i2s_set_pin(I2S_PORT, &pin_config);
   if (err != ESP_OK) {
-    Serial.printf("[I2S] Failed to set pin configuration: %d\n", err);
+    Serial.printf("[I2S] Pin configuration failed: %d\n", err);
     return;
   }
 
   i2s_zero_dma_buffer(I2S_PORT);
-  Serial.println("[I2S] I2S Microphone Initialized Successfully!");
-}
-
-void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
-  switch (type) {
-    case WStype_DISCONNECTED:
-      Serial.println("[WS] Disconnected from Smart Cap Server!");
-      isWsConnected = false;
-      break;
-    case WStype_CONNECTED:
-      Serial.printf("[WS] Connected to Server: %s\n", payload);
-      isWsConnected = true;
-      // Send handshake JSON
-      webSocket.sendTXT("{\"device\":\"ESP32_SMART_CAP\",\"sample_rate\":16000,\"format\":\"PCM16_MONO\"}");
-      break;
-    case WStype_TEXT:
-      Serial.printf("[WS] Server Message: %s\n", payload);
-      break;
-    case WStype_ERROR:
-      Serial.println("[WS] Error occurred!");
-      break;
-    default:
-      break;
-  }
+  Serial.println("[I2S] Digital Microphone Initialized Successfully!");
 }
 
 void connectWiFi() {
@@ -131,18 +104,48 @@ void connectWiFi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
   int retries = 0;
-  while (WiFi.status() != WL_CONNECTED && retries < 30) {
-    delay(500);
+  while (WiFi.status() != WL_CONNECTED && retries < 40) {
+    delay(400);
     Serial.print(".");
     retries++;
   }
 
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\n[WiFi] Connected Successfully!");
-    Serial.print("[WiFi] ESP32 IP Address: ");
+    Serial.println("\n[WiFi] Connected to Internet!");
+    Serial.print("[WiFi] ESP32 IP: ");
     Serial.println(WiFi.localIP());
   } else {
-    Serial.println("\n[WiFi] Failed to connect! Check your SSID & Password.");
+    Serial.println("\n[WiFi] Connection Failed! Check SSID & Password.");
+  }
+}
+
+void sendAudioToVercel(uint8_t* data, size_t len) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("[Cloud] WiFi disconnected, retrying connection...");
+    connectWiFi();
+    return;
+  }
+
+  WiFiClientSecure client;
+  client.setInsecure(); // Allows HTTPS without loading root CA bundle
+
+  HTTPClient https;
+  Serial.printf("[Cloud] Posting %d bytes to Vercel: %s\n", len, VERCEL_API_URL);
+
+  if (https.begin(client, VERCEL_API_URL)) {
+    https.addHeader("Content-Type", "application/octet-stream");
+    https.setTimeout(8000);
+
+    int httpCode = https.POST(data, len);
+    if (httpCode > 0) {
+      String response = https.getString();
+      Serial.printf("[Cloud] Vercel Response (%d): %s\n", httpCode, response.c_str());
+    } else {
+      Serial.printf("[Cloud] POST Failed, error: %s\n", https.errorToString(httpCode).c_str());
+    }
+    https.end();
+  } else {
+    Serial.println("[Cloud] Unable to connect to Vercel!");
   }
 }
 
@@ -151,54 +154,43 @@ void setup() {
   delay(1000);
 
   Serial.println("\n========================================================");
-  Serial.println("  SMART CAP // ESP32 DIGITAL MIC AUDIO STREAMER  ");
+  Serial.println("  SMART CAP // ESP32 TO VERCEL CLOUD STREAMER  ");
+  Serial.println("  (100% CLOUD NATIVE - ZERO LOCALHOST)  ");
   Serial.println("========================================================");
 
-  // 1. Connect WiFi
+  // Allocate audio buffer in PSRAM/RAM
+  pcm_audio_buffer = (int16_t*)malloc(RECORD_SAMPLES * sizeof(int16_t));
+  if (!pcm_audio_buffer) {
+    Serial.println("[Error] Could not allocate audio buffer!");
+    while(1) delay(1000);
+  }
+
   connectWiFi();
-
-  // 2. Setup I2S Mic
   setupI2S();
-
-  // 3. Setup WebSocket Client
-  Serial.printf("[WS] Connecting to ws://%s:%d%s\n", SERVER_HOST, SERVER_PORT, WS_PATH);
-  webSocket.begin(SERVER_HOST, SERVER_PORT, WS_PATH);
-  webSocket.onEvent(webSocketEvent);
-  webSocket.setReconnectInterval(3000);
+  Serial.println("[Ready] Speak into microphone! Audio will stream to Vercel.\n");
 }
 
 void loop() {
-  // Handle WebSocket events
-  webSocket.loop();
+  size_t bytes_read = 0;
+  esp_err_t result = i2s_read(I2S_PORT, (void*)raw_buffer, sizeof(raw_buffer), &bytes_read, portMAX_DELAY);
 
-  // Check WiFi status
-  if (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    return;
-  }
+  if (result == ESP_OK && bytes_read > 0) {
+    int samples = bytes_read / sizeof(int32_t);
 
-  // If connected, read audio from INMP441 and stream
-  if (isWsConnected) {
-    size_t bytes_read = 0;
-    esp_err_t result = i2s_read(I2S_PORT, (void*)raw_i2s_samples, sizeof(raw_i2s_samples), &bytes_read, portMAX_DELAY);
-
-    if (result == ESP_OK && bytes_read > 0) {
-      int samples_count = bytes_read / sizeof(int32_t);
-
-      // Convert 24-bit / 32-bit I2S data to 16-bit PCM with digital gain
-      for (int i = 0; i < samples_count; i++) {
-        // Shift right by 14 bits to extract clean 16-bit audio
-        int32_t sample = raw_i2s_samples[i] >> 14;
-
-        // Clamp to 16-bit signed range (-32768 to 32767)
+    for (int i = 0; i < samples; i++) {
+      if (recorded_count < RECORD_SAMPLES) {
+        int32_t sample = raw_buffer[i] >> 14;
         if (sample > 32767) sample = 32767;
         else if (sample < -32768) sample = -32768;
-
-        pcm16_samples[i] = (int16_t)sample;
+        pcm_audio_buffer[recorded_count++] = (int16_t)sample;
       }
+    }
 
-      // Send raw 16-bit PCM bytes over WebSocket
-      webSocket.sendBIN((uint8_t*)pcm16_samples, samples_count * sizeof(int16_t));
+    // When buffer is full (~2.5 seconds of audio), send directly to Vercel!
+    if (recorded_count >= RECORD_SAMPLES) {
+      Serial.println("[Mic] Buffer full (~2.5s recorded). Sending to Vercel...");
+      sendAudioToVercel((uint8_t*)pcm_audio_buffer, RECORD_SAMPLES * sizeof(int16_t));
+      recorded_count = 0; // Reset for next speech chunk
     }
   }
 }

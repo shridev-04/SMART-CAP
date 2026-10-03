@@ -12,6 +12,7 @@ const state = {
   esp32Connected: false,
   isWireframe: true,
   autoRotate: true,
+  listenEsp32Audio: false,
   history: [],
 };
 
@@ -559,6 +560,50 @@ function connectBackendWebSocket(customUrl = null) {
   }
 }
 
+let playbackAudioCtx = null;
+let nextPlayTime = 0;
+
+function playEsp32PcmChunk(b64Data) {
+  if (!state.listenEsp32Audio) return;
+  try {
+    if (!playbackAudioCtx) {
+      playbackAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+      nextPlayTime = playbackAudioCtx.currentTime;
+    }
+    if (playbackAudioCtx.state === 'suspended') {
+      playbackAudioCtx.resume();
+    }
+
+    const binaryString = atob(b64Data);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    const int16 = new Int16Array(bytes.buffer);
+    const float32 = new Float32Array(int16.length);
+    for (let i = 0; i < int16.length; i++) {
+      float32[i] = int16[i] / 32768.0;
+    }
+
+    const buffer = playbackAudioCtx.createBuffer(1, float32.length, 16000);
+    buffer.copyToChannel(float32, 0);
+
+    const source = playbackAudioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(playbackAudioCtx.destination);
+
+    if (nextPlayTime < playbackAudioCtx.currentTime) {
+      nextPlayTime = playbackAudioCtx.currentTime;
+    }
+    source.start(nextPlayTime);
+    nextPlayTime += buffer.duration;
+  } catch (err) {
+    console.error('Playback error:', err);
+  }
+}
+
 function handleServerMessage(msg) {
   switch (msg.type) {
     case 'welcome':
@@ -578,6 +623,11 @@ function handleServerMessage(msg) {
         }
         const vad = msg.rms > 0.02 ? 'ESP32 VOICE DETECTED' : 'ESP32 LISTENING';
         updateAudioTelemetry(msg.rms || 0, msg.db || -60, vad);
+
+        // Live Speaker Audio Output (Hear ESP32 mic on laptop)
+        if (msg.audio_b64) {
+          playEsp32PcmChunk(msg.audio_b64);
+        }
 
         // Generate synthetic wave data from FFT for oscilloscope
         for (let i = 0; i < timeDomainData.length; i++) {
@@ -633,7 +683,7 @@ function initUIEvents() {
     state.mode = 'browser';
     btnBrowser.classList.add('active');
     btnEsp32.classList.remove('active');
-    document.getElementById('activeSourceTag').textContent = 'LAPTOP MIC';
+    document.getElementById('activeSourceTag').textContent = 'DEVICE MIC';
     document.getElementById('activeSourceTag').className = 'tag-val neon-cyan';
     document.getElementById('btnToggleMic').style.display = 'flex';
   });
@@ -642,7 +692,7 @@ function initUIEvents() {
     state.mode = 'esp32';
     btnEsp32.classList.add('active');
     btnBrowser.classList.remove('active');
-    document.getElementById('activeSourceTag').textContent = 'ESP32 I2S MIC';
+    document.getElementById('activeSourceTag').textContent = 'ESP32 CLOUD';
     document.getElementById('activeSourceTag').className = 'tag-val neon-green';
     // If browser mic was on, turn it off to save resources
     if (state.isMicActive) {
@@ -709,6 +759,30 @@ function initUIEvents() {
       const url = copyInput.value.trim();
       if (url) {
         connectBackendWebSocket(url);
+      }
+    });
+  }
+
+  // Toggle Live Audio Listening to ESP32 Mic through laptop speakers
+  const btnAudioListen = document.getElementById('btnToggleAudioListen');
+  if (btnAudioListen) {
+    btnAudioListen.addEventListener('click', () => {
+      state.listenEsp32Audio = !state.listenEsp32Audio;
+      const text = document.getElementById('listenAudioText');
+      if (state.listenEsp32Audio) {
+        text.textContent = 'SPEAKER: LIVE ON';
+        btnAudioListen.style.borderColor = 'var(--neon-green)';
+        btnAudioListen.style.color = 'var(--neon-green)';
+        if (!playbackAudioCtx) {
+          playbackAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        }
+        if (playbackAudioCtx.state === 'suspended') {
+          playbackAudioCtx.resume();
+        }
+      } else {
+        text.textContent = 'SPEAKER: OFF';
+        btnAudioListen.style.borderColor = 'var(--border-subtle)';
+        btnAudioListen.style.color = 'var(--text-primary)';
       }
     });
   }
@@ -808,8 +882,8 @@ function addTranscriptToHistory(text, source, lang) {
 
   state.history.unshift({
     text,
-    source: source === 'esp32' ? 'ESP32 I2S MIC' : 'LAPTOP MIC',
-    sourceClass: source === 'esp32' ? 'esp32' : 'browser',
+    source: (source && source.includes('esp32')) ? 'ESP32 CLOUD' : 'DEVICE MIC',
+    sourceClass: (source && source.includes('esp32')) ? 'esp32' : 'browser',
     lang: lang,
     time: timeStr,
   });
@@ -845,6 +919,36 @@ function renderHistory() {
   list.innerHTML = html;
 }
 
+let lastPolledTimestamp = 0;
+
+function startCloudPolling() {
+  setInterval(async () => {
+    if (state.mode !== 'esp32') return;
+    try {
+      const res = await fetch('/api/stream');
+      if (!res.ok) return;
+      const data = await res.json();
+
+      updateEsp32Status(data.esp32_connected, 'Vercel Cloud API');
+
+      if (data.bands && data.bands.length) {
+        frequencyBands = data.bands;
+      }
+
+      const vad = data.rms > 0.02 ? 'ESP32 VOICE DETECTED' : 'ESP32 LISTENING';
+      updateAudioTelemetry(data.rms || 0, data.db || -60, vad);
+
+      if (data.latest_transcript && data.last_timestamp > lastPolledTimestamp) {
+        lastPolledTimestamp = data.last_timestamp;
+        document.getElementById('liveTranscriptDisplay').innerHTML = `<strong>${data.latest_transcript}</strong>`;
+        addTranscriptToHistory(data.latest_transcript, 'esp32', data.language || state.language);
+      }
+    } catch (e) {
+      // background polling error ignored
+    }
+  }, 600);
+}
+
 
 // =========================================================
 // 6. INITIALIZATION ON PAGE LOAD
@@ -854,14 +958,37 @@ window.addEventListener('DOMContentLoaded', () => {
   drawFrequencySpectrum();
   drawOscilloscope();
   initUIEvents();
-  connectBackendWebSocket();
 
-  // Fetch initial info
-  fetch('/api/info')
-    .then((r) => r.json())
-    .then((info) => {
-      document.getElementById('esp32UrlInput').value = info.ws_esp32_url;
-      updateEsp32Status(info.esp32_connected, info.local_ip);
-    })
-    .catch((err) => console.error('Error fetching server info:', err));
+  const origin = window.location.origin;
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const esp32Input = document.getElementById('esp32UrlInput');
+
+  // Automatically generate public cloud endpoint
+  if (!isLocal) {
+    // VERCEL CLOUD ENVIRONMENT
+    esp32Input.value = `${origin}/api/audio`;
+    const text = document.getElementById('esp32StatusText');
+    const ipLabel = document.getElementById('esp32ClientIp');
+    const dot = document.getElementById('esp32StatusDot');
+    if (text) {
+      text.textContent = 'VERCEL CLOUD: ACTIVE';
+      text.style.color = '#00ff9f';
+    }
+    if (dot) dot.classList.add('online');
+    if (ipLabel) ipLabel.textContent = 'Cloud Endpoint Ready for ESP32';
+  } else {
+    // Local development fallback
+    connectBackendWebSocket();
+    fetch('/api/info')
+      .then((r) => r.json())
+      .then((info) => {
+        esp32Input.value = info.ws_esp32_url || `${origin}/api/audio`;
+        updateEsp32Status(info.esp32_connected, info.local_ip);
+      })
+      .catch(() => {
+        esp32Input.value = `${origin}/api/audio`;
+      });
+  }
+
+  startCloudPolling();
 });

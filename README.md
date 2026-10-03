@@ -17,11 +17,13 @@ Ultra-modern Cyberpunk 3D Website with Real-Time Speech-to-Text (STT), 32-Band A
    - Dual language toggle: **Hindi (hi-IN)** & **English (en-IN / en-US)**.
    - Transcript history with timestamp, speaker source badge, and export to `.txt`.
    - Text-to-Speech replay button.
-4. **Automatic ESP32 Link Generator**:
-   - Auto-detects local host IP and generates ready-to-copy WebSocket link (`ws://<IP>:8000/ws/esp32`).
-5. **Dual Operation Modes**:
-   - 🎙️ **Laptop/PC Mic Test Mode**: Test immediately on localhost with 0 extra hardware needed!
-   - 📡 **ESP32 Live Stream Mode**: Real-time I2S digital mic stream from ESP32 over Wi-Fi.
+4. **Automatic Vercel Cloud Link Generator**:
+   - Vercel par deploy hone ke baad automatically aapka public cloud endpoint (`https://<your-project>.vercel.app/api/audio`) generate karta hai.
+5. **Zero Localhost Dependency**:
+   - ESP32 seedha Vercel ke Cloud URL par audio bhejta hai. Laptop ya local server on rakhne ki bilkul zaroorat nahi hai!
+6. **Dual Operation Modes**:
+   - 🎙️ **Device Mic Mode**: Mobile ya laptop mic se direct 3D visualizer aur Speech-to-Text test karein.
+   - 📡 **ESP32 Cloud Stream Mode**: ESP32 se internet ke zariye direct audio stream.
 
 ---
 
@@ -38,26 +40,26 @@ Ultra-modern Cyberpunk 3D Website with Real-Time Speech-to-Text (STT), 32-Band A
 
 ---
 
-## 🚀 Quick Start (Localhost Pe Run Kaise Kare)
+## ☁️ Vercel Cloud Par Kaise Use Kare (100% Cloud)
 
-### Step 1: Start the Python Backend Server
-Open your terminal in this folder and run:
+1. Apni website open karein: `https://your-smart-cap.vercel.app`
+2. Header me **"ESP32 CLOUD LINK"** me aapko link dikhega:
+   `https://your-smart-cap.vercel.app/api/audio`
+3. ESP32 ke Arduino code (`esp32_smart_mic.ino`) me ye link daal kar flash karein:
+   ```cpp
+   const char* VERCEL_API_URL = "https://your-smart-cap.vercel.app/api/audio";
+   ```
+4. ESP32 ko power bank ya charger se plug karein.
+5. Mic me bole — Vercel par real-time text aur 3D frequency visualizer chalega!
+
+---
+
+## 💻 Optional: Local Offline Testing (Bina Internet ke)
+
+Agar bina internet ke apne laptop par offline test karna chahein:
 ```bash
 python server.py
 ```
-
-Console me aapko links dikhenge:
-- 🌐 **Localhost Browser**: `http://localhost:8000`
-- 🌐 **Network Browser**: `http://10.21.66.171:8000`
-- ⚡ **ESP32 WebSocket**: `ws://10.21.66.171:8000/ws/esp32`
-
-### Step 2: Open Website in Browser
-1. Browser me `http://localhost:8000` khole.
-2. **"START MIC"** button par click karke browser mic allow kare.
-3. Kuch bole (jaise *"Namaste"* ya *"Hello Smart Cap"*):
-   - 3D Holographic Orb voice energy ke sath pulsate karega.
-   - 32-Band Equalizer aur Oscilloscope frequency wave dikhayenge.
-   - Jo bhi aap bolenge wo Live Transcript Box me text ban kar dikhayega!
 
 ---
 
