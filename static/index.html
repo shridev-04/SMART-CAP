@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMART CAP // 3D Futuristic Neural Audio & STT Hub</title>
+  
+  <!-- Sci-Fi Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Cyberpunk Background Grid & Scanline FX -->
+  <div class="cyber-grid"></div>
+  <div class="scanlines"></div>
+  <div class="vignette"></div>
+
+  <!-- Main HUD Layout -->
+  <div class="hud-container">
+    
+    <!-- TOP NAVIGATION & STATUS BAR -->
+    <header class="hud-header">
+      <div class="hud-brand">
+        <div class="cyber-badge-pulse"></div>
+        <div class="brand-text">
+          <h1>SMART CAP <span class="accent-text">// NEURAL 3D CORE</span></h1>
+          <p class="subtitle">REAL-TIME DIGITAL MIC STREAM &amp; HOLOGRAPHIC STT SYSTEM</p>
+        </div>
+      </div>
+
+      <!-- ESP32 LINK GENERATOR & STATUS -->
+      <div class="hud-connection-panel">
+        <div class="connection-status-box" id="esp32StatusBox">
+          <span class="status-indicator-dot" id="esp32StatusDot"></span>
+          <div class="status-info">
+            <span class="status-title" id="esp32StatusText">ESP32: DISCONNECTED</span>
+            <span class="status-ip" id="esp32ClientIp">Waiting for WebSocket handshake...</span>
+          </div>
+        </div>
+
+        <div class="esp32-url-card">
+          <div class="url-label">
+            <i class="fa-solid fa-link"></i> ESP32 WEBSOCKET LINK:
+          </div>
+          <div class="url-copy-row">
+            <input type="text" id="esp32UrlInput" value="ws://localhost:8000/ws/esp32" readonly>
+            <button class="btn-cyber-copy" id="btnCopyEsp32Url" title="Copy WebSocket Link for ESP32">
+              <i class="fa-regular fa-copy"></i> COPY LINK
+            </button>
+          </div>
+          <div class="copy-alert" id="copySuccessAlert">COPIED TO CLIPBOARD!</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN INTERACTIVE SECTION -->
+    <main class="hud-main">
+      
+      <!-- LEFT / CENTER: 3D HOLOGRAPHIC VISUALIZER VIEWPORT -->
+      <section class="viewport-3d-card">
+        <div class="card-header-bar">
+          <div class="card-title">
+            <i class="fa-solid fa-cube glow-icon"></i> 3D QUANTUM AUDIO-REACTIVE HOLOGRAPH
+          </div>
+          
+          <div class="mode-toggles">
+            <button class="mode-btn active" id="btnModeBrowser">
+              <i class="fa-solid fa-microphone"></i> LAPTOP MIC TEST
+            </button>
+            <button class="mode-btn" id="btnModeEsp32">
+              <i class="fa-solid fa-microchip"></i> ESP32 STREAM
+            </button>
+          </div>
+        </div>
+
+        <!-- Three.js 3D WebGL Canvas Container -->
+        <div id="canvas-container" class="canvas-viewport">
+          <div class="viewport-overlay-data">
+            <div class="hud-data-tag top-left">
+              <span class="tag-title">FPS:</span> <span id="fpsCounter" class="tag-val">60</span>
+            </div>
+            <div class="hud-data-tag top-right">
+              <span class="tag-title">SOURCE:</span> <span id="activeSourceTag" class="tag-val neon-cyan">LAPTOP MIC</span>
+            </div>
+            <div class="hud-data-tag bottom-left">
+              <span class="tag-title">ENERGY (RMS):</span> <span id="rmsValueTag" class="tag-val">0.0000</span>
+            </div>
+            <div class="hud-data-tag bottom-right">
+              <span class="tag-title">VOICE STATE:</span> <span id="vadStateTag" class="tag-val neon-green">IDLE / LISTENING</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3D Controls Toolbar -->
+        <div class="viewport-controls-toolbar">
+          <div class="control-group">
+            <button class="cyber-action-btn" id="btnToggleMic">
+              <i class="fa-solid fa-microphone-lines"></i> <span id="btnMicText">START MIC</span>
+            </button>
+            <button class="cyber-btn-secondary" id="btnToggleMesh">
+              <i class="fa-solid fa-shapes"></i> <span id="meshModeText">WIREFRAME</span>
+            </button>
+            <button class="cyber-btn-secondary" id="btnToggleRotation">
+              <i class="fa-solid fa-rotate"></i> ROTATE
+            </button>
+          </div>
+          
+          <div class="sensitivity-slider-box">
+            <label for="gainSlider"><i class="fa-solid fa-gauge-high"></i> SENSITIVITY:</label>
+            <input type="range" id="gainSlider" min="1" max="10" step="0.5" value="3.5">
+            <span id="gainValText">3.5x</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT PANEL: SPEECH TO TEXT RECOGNITION TERMINAL -->
+      <aside class="hud-stt-panel">
+        <div class="card-header-bar">
+          <div class="card-title">
+            <i class="fa-solid fa-terminal glow-icon-purple"></i> NEURAL SPEECH-TO-TEXT HUD
+          </div>
+          <div class="lang-selector">
+            <button class="lang-btn active" data-lang="hi-IN" id="btnLangHi">
+              🇮🇳 HINDI
+            </button>
+            <button class="lang-btn" data-lang="en-IN" id="btnLangEn">
+              🇬🇧 ENGLISH
+            </button>
+          </div>
+        </div>
+
+        <!-- LIVE STREAMING TRANSCRIPT BOX -->
+        <div class="live-transcript-terminal">
+          <div class="terminal-header">
+            <span class="live-pulse-dot"></span>
+            <span class="terminal-title">LIVE VOICE STREAM [TRANSCRIPTION]</span>
+            <span class="terminal-codec" id="activeCodec">16kHz PCM</span>
+          </div>
+          <div class="live-spoken-box" id="liveTranscriptDisplay">
+            <span class="placeholder-text">Speak into microphone... Words will materialize here in real-time.</span>
+          </div>
+        </div>
+
+        <!-- TRANSCRIPT HISTORY FEED -->
+        <div class="history-section">
+          <div class="history-header">
+            <span><i class="fa-solid fa-clock-rotate-left"></i> RECOGNITION HISTORY</span>
+            <div class="history-actions">
+              <button class="icon-btn" id="btnClearHistory" title="Clear History">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+              <button class="icon-btn" id="btnCopyHistory" title="Copy All">
+                <i class="fa-regular fa-copy"></i>
+              </button>
+              <button class="icon-btn" id="btnDownloadHistory" title="Download Text File">
+                <i class="fa-solid fa-download"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="history-feed-list" id="transcriptFeed">
+            <div class="history-empty" id="historyEmptyMsg">
+              <i class="fa-solid fa-wave-square"></i>
+              <p>No audio recognized yet. Say "Namaste" or "Hello Smart Cap"!</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- QUICK TEST PHRASES & TTS -->
+        <div class="stt-footer-bar">
+          <button class="cyber-btn-secondary full-width" id="btnSpeakLast">
+            <i class="fa-solid fa-volume-high"></i> RE-PLAY LAST TEXT (VOICE)
+          </button>
+        </div>
+      </aside>
+
+    </main>
+
+    <!-- BOTTOM PANEL: AUDIO FREQUENCY SPECTRUM & OSCILLOSCOPE HUD -->
+    <footer class="hud-footer-spectrum">
+      
+      <!-- FREQUENCY BARS BLOCK -->
+      <div class="spectrum-block">
+        <div class="spectrum-header">
+          <span class="spectrum-title">
+            <i class="fa-solid fa-chart-simple glow-icon-green"></i> 32-BAND REAL-TIME FREQUENCY SPECTRUM
+          </span>
+          <div class="freq-labels-legend">
+            <span>SUB (60Hz)</span>
+            <span>BASS (250Hz)</span>
+            <span>MIDS (1kHz)</span>
+            <span>PRESENCE (4kHz)</span>
+            <span>BRILLIANCE (16kHz)</span>
+          </div>
+        </div>
+
+        <!-- Canvas for 32 Realtime Visualizer Bars -->
+        <div class="spectrum-canvas-wrap">
+          <canvas id="freqCanvas" width="900" height="120"></canvas>
+        </div>
+      </div>
+
+      <!-- OSCILLOSCOPE & DECIBEL METERS -->
+      <div class="oscilloscope-block">
+        <div class="spectrum-header">
+          <span class="spectrum-title">
+            <i class="fa-solid fa-bolt glow-icon"></i> OSCILLOSCOPE &amp; VAD
+          </span>
+          <span class="db-readout" id="dbReadout">-60.0 dB</span>
+        </div>
+        
+        <div class="oscilloscope-canvas-wrap">
+          <canvas id="waveCanvas" width="380" height="120"></canvas>
+        </div>
+        
+        <!-- Peak Level Meter -->
+        <div class="meter-bar-container">
+          <div class="meter-fill" id="meterFill"></div>
+        </div>
+      </div>
+
+    </footer>
+
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
